@@ -93,7 +93,7 @@ def regress(year_series, values):
     return new_val, ridge.coef_
 
     
-# LOAD DATA   
+########################################## LOAD THE DATA #########################################
 file_path_ngo_budget = 'Data/NGO_DataDisbursement.csv'
 ngo_file = open(file_path_ngo_budget, 'r')
 reader = csv.DictReader(ngo_file)
@@ -102,7 +102,6 @@ countries = []
 curr_country = ''
 dict_country_data = defaultdict(list)
 for row in reader:
-    #print(row)
     country = row['ISO_code']
     countries.append(country)
     if curr_country != country:
@@ -114,33 +113,13 @@ countries = list(set(countries))
 countries = sorted(countries)
 country_data = []
 for c in countries:
-    #dict_country_data[c] = np.sum(dict_country_data[c], axis=0)
     country_data.append(np.sum(dict_country_data[c], axis=0))
 
 country_data = np.array(country_data)
 country_data = country_data.astype(float)
-print(country_data)
-#plt.matshow(country_data.T)
-#plt.colorbar()
-#plt.show()    
 country_data = convert_to_float_ex(country_data)
-print(country_data)
 country_data = country_data.T
-plt.matshow(country_data)
-plt.colorbar()
-plt.show()
     
-file_path_l_e = 'Data/life_exp.csv'
-le_file = open(file_path_l_e, 'r')
-reader = csv.DictReader(le_file)
-reader = sorted(reader, key=lambda d: d['Country Code'])
-data_l_e = []
-for row in reader:
-    if row['Country Code'] not in countries:
-        continue
-    #print(row['Country Code'])
-    rows = [row[str(y)+' [YR'+str(y)+']'] for y in years ]
-    data_l_e.append(rows)
     
 f = 'Data/child_mort.csv'
 ff = open(f, 'r')
@@ -159,7 +138,6 @@ pop_file = open(file_population, 'r')
 reader = csv.DictReader(pop_file)
 reader = sorted(reader, key=lambda d: d['Country Code'])
 data_pop = []
-#2000 [YR2000]
 for row in reader:
     if row['Country Code'] not in countries:
         continue
@@ -167,23 +145,6 @@ for row in reader:
     
     data_pop.append(rows)
     
-    
-found_countries = []
-f = 'Data/sanitation2.csv'
-ff = open(f, 'r')
-reader = csv.DictReader(ff)
-reader = sorted(reader, key=lambda d: d['Country Code'])
-data_san = []
-for row in reader:
-    if row['Country Code'] not in countries:
-        continue
-    rows = [row[str(y)+' [YR'+str(y)+']'] for y in years ]
-    found_countries.append(row['Country Code'])
-    data_san.append(rows)   
-found_countries = set(found_countries) 
-fail = list(set(countries) - found_countries)
-for f in fail:
-    print(f)
 
 f = 'Data/water.csv'
 ff = open(f, 'r')
@@ -195,190 +156,131 @@ for row in reader:
         continue
     rows = [row[str(y)+' [YR'+str(y)+']'] for y in years ]
     data_water.append(rows) 
-    
-    
-f = 'Data/poverty.csv'
-ff = open(f, 'r')
-reader = csv.DictReader(ff)
-reader = sorted(reader, key=lambda d: d['Country Code'])
-data_poverty = []
-for row in reader:
-    if row['Country Code'] not in countries:
-        continue
-    rows = [row[str(y)+' [YR'+str(y)+']'] for y in years ]
-    data_poverty.append(rows)    
-    
-    
-f = 'Data/prevalence.csv'
-ff = open(f, 'r')
-reader = csv.DictReader(ff)
-reader = sorted(reader, key=lambda d: d['Country Code'])
-data_prel = []
-for row in reader:
-    if row['Country Code'] not in countries:
-        continue
-    rows = [row[str(y)+' [YR'+str(y)+']'] for y in years ]
-    data_prel.append(rows)   
-    
-data_l_e = convert_to_float(data_l_e)
-data_l_e = data_l_e.T
-plt.matshow(data_l_e)
-plt.colorbar()
-plt.show()
-#print(data)
 
-print(countries)
-
+    
 data_pop = convert_to_float(data_pop)
-data_ch_m_ORIG = convert_to_float(data_ch_m)
-data_san_ORIG = convert_to_float(data_san)
-data_water_ORIG = convert_to_float(data_water)
-data_poverty_ORIG = convert_to_float(data_poverty)
-data_prel_ORIG = convert_to_float(data_prel)
-#data_ch_m = np.multiply(data_ch_m, data_pop) # abs valus
-#data_san = np.multiply(data_san, data_pop) # abs valus
-#data_ch_m = data_ch_m * 0.001
-#data_san = data_san * 0.01
+data_ch_m = convert_to_float(data_ch_m)
+data_water = convert_to_float(data_water)
 
 
 
-# plt.matshow(data_ch_m.T)
-# plt.colorbar()
-# plt.show()
+data_ch_m = np.multiply(data_ch_m/10000.0,data_pop) #Assume that 10 % of the Population are Children
+country_data = ((country_data.T / np.sum(country_data,1))*1e9).T
 
-# plt.matshow(data_san.T)
-# plt.colorbar()
-# plt.show()
-
-# plt.matshow(data_water.T)
-# plt.colorbar()
-# plt.show()
-
-# plt.matshow(data_poverty.T)
-# plt.colorbar()
-# plt.show()
-
-# plt.matshow(data_prel.T)
-# plt.colorbar()
-# plt.show()
-
-
-data_san = data_san_ORIG
-data_water = data_water_ORIG
-data_ch_m =data_ch_m_ORIG
 
 
 # ITERATE FOR NEXT 5 YEARS
-for new_year in range(2017, 2022):
+for new_year in range(2017, 2021):
 
     ################### REGRESSION OF FUTURE WATER; SANITARY and POPULATION ####################################
-    reg_san, coeff_san = regress(years, data_san.T)
+    #reg_san, coeff_san = regress(years, data_san.T)
 
     reg_water, coeff_water = regress(years, data_water.T)
+
+
 
     reg_pop, coeff_pop = regress(years, data_pop.T)
 
 
     #################### LEAST SQUARE to find MORTALITY COEFFS ####################################
 
-    data_ch_m = np.multiply(data_ch_m/10000.0,data_pop)
-    #data_san= np.multiply(data_san/100.0,data_pop)
-    #data_water = np.multiply(data_water/100.0,data_pop)
+    data_ch_m_curr = data_ch_m
+    data_water_curr = np.multiply(data_water/100.0,data_pop) 
 
-    print(country_data.shape,data_ch_m.shape,data_san.shape)
+    print(country_data.shape,data_ch_m_curr.shape,data_san.shape)
     coeff = []
-    err = []
+    #err = []
     for idx,c in enumerate(country_data.T):
         l = len(c)
-        A = np.ones(l)
-        A = np.vstack([A,c])
-        #A = np.vstack([A,data_san[idx,:]])
-        #A = np.vstack([A,data_water[idx,:]])
-        #plt.plot(range(l),data_pop[idx,:])
-        #plt.show()
+        A = np.ones(l) #Constant
+        A = np.vstack([A,c]) #Money Poured into the Country
+        A = np.vstack([A,data_water_curr[idx,:]]) #Number of People which have access to clean water
         A = A.T
-        #C,R = lstsq(A,data_ch_m[idx,:])[:2]
         reg = LinearRegression()
-        reg.fit(A,data_ch_m[idx,:].reshape(-1,1))
+        reg.fit(A,data_ch_m_curr[idx,:].reshape(-1,1)) # Estimate the Coefficients for Child Mortality = alpha + beta * Funds + ceta * Acces Water weighed by Population
         C = reg.coef_[0]
-        p = reg.p[0]
-        e = reg.score(A,data_ch_m[idx,:])
-        err.append(e.mean())
-        #C = list(zip(C,p))
         coeff.append(C)
-    #print(err)
-    plt.show()
+
+
     coeff = np.array(coeff)
-    #print(coeff.shape)
-    #x_range = range(len(coeff))
-    #plt.plot(x_range,coeff[:,1])
-    #plt.show()
-    #print(coeff)
 
 
 
 
     #################################### LINEAR PROGRAM ######################################################
 
-    beta = coeff[:,1]
-    #reg_san = np.multiply(reg_san/100.0,reg_pop)
-    #reg_water = np.multiply(reg_water/100.0,reg_pop)
+    beta = coeff[:,1] #Sum ovuer the Money weighted by our coefficients
+    reg_water_curr = np.multiply(reg_water/100.0,reg_pop) #Number of People which have access to clean water which was predicted
+    reg_water_curr = np.multiply(reg_water_curr,coeff[:,2]) #Multiply by coefficient 
 
-    #reg_san = np.multiply(reg_san,coeff[:,2])
-    #reg_water = np.multiply(reg_water,coeff[:,3])
-
-    c = coeff[:,0] #+ reg_san + reg_water
+    c = coeff[:,0] + reg_water_curr
     c = c.reshape(-1)
-    #print(c.shape)
+
 
     A = np.ones(len(beta))
     eye_m = -np.diag(beta)
     A = np.vstack([A,eye_m])
-    #print(A)
+    A = np.vstack([A,np.eye(len(beta))])
 
     b = np.zeros(len(beta) +1)
-    b[0] = 1e9
+    b[0] = 1e9 # It has to sum up to 1 Billion 
     b[1:] += c
-
-    #idx = np.where(np.logical_or(b[1:] >= 0,-1*beta >= 0))
-
-
-    #beta = beta[idx]
-    #b = np.zeros(len(beta) +1)
-    #c = c[idx]
-    #b[0] = 1e9
-    #b[1:] += c
-    #A = np.ones(len(beta))
-    #eye_m = -np.diag(beta)
-    #A = np.vstack([A,eye_m])
+    b = np.hstack([b,country_data[-1,:] * 1.3]) # We can't spend more than 1.3 the former value
 
 
-
-    res = linprog(beta, A_ub=A, b_ub=b)
+    res = linprog(beta, A_ub=A, b_ub=b) #Linear Program A*x <= b, Maximize for the money poured into the countries
     X = res['x']
-    #print(res['x'],np.sum(res['x']))
-    new_mort_rate = np.multiply(X,beta) + c
-    print(np.sum(new_mort_rate))
+
+    new_mort_rate = np.multiply(X,beta) + c 
 
 
     #################################### UPDATE THE VALUES ####################################
 
 
-    # check if they have to be rescaled
 
-    print('data_san: ', data_san.shape)
-    print('reg_san: ', reg_san.shape)
-    data_san = np.hstack([data_san,reg_san.T])
+    data_water = np.hstack((data_water,reg_water.T))
 
-    reg_water = np.hstack((data_water,reg_water.T))
+    data_pop = np.hstack((data_pop,reg_pop.T))
     country_data = np.vstack((country_data, X))
-    
     new_mort_rate = new_mort_rate.reshape((len(new_mort_rate),1))
-    print('data_ch_m: ', data_ch_m.shape)
-    print('new_mort_rate: ', new_mort_rate.shape)
     data_ch_m = np.hstack((data_ch_m, new_mort_rate))
-    
-    years.append(new_year)
-    print('iter for ', new_year)
+    years = np.hstack((years, new_year))
 
 print('done')
+
+#################################### PLOTTING ####################################
+
+v = np.argsort(country_data[-1])[::-1][:5]
+x_range = np.arange(2015,2020)
+for idx in v:
+    plt.plot(np.arange(2010,2020),country_data[:-10,idx], label = countries[idx])
+    plt.legend()
+
+plt.xlabel("Years")
+plt.ylabel("USD")
+plt.title("Funds Allocation change for selected Years")
+plt.show()
+
+import sklearn
+
+reg = sklearn.linear_model.LinearRegression()
+
+new_mort_rate = np.sum(data_ch_m,0)
+
+x = np.arange(2001,2015).reshape(-1,1)
+y = new_mort_rate[:14]
+reg.fit(x,y)
+y = reg.predict(x_range.reshape(-1,1))
+
+plt.plot(np.arange(2010,2020),new_mort_rate[-10:], label = "Our Model")
+plt.plot(x_range,y+192000, label = "Linear Prediction")
+plt.legend()
+plt.title("Child Mortatility")
+plt.show()
+
+plt.plot(np.arange(2011,2021),np.sum(country_data != 0,1)[-10:])
+
+plt.xlabel("Years")
+plt.ylabel("Number of Countries")
+plt.title("Number of Countries with Funds allocated")
+plt.show()
