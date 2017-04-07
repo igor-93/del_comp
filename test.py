@@ -5,10 +5,45 @@ from matplotlib import pyplot as plt
 from sklearn.linear_model import Ridge
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.pipeline import make_pipeline
+from sklearn import linear_model
+from scipy import stats
+from scipy.optimize import linprog
+from scipy.linalg import lstsq
 
 from collections import defaultdict
 
 years = np.arange(2001,2017)   # for data
+
+class LinearRegression(linear_model.LinearRegression):
+    """
+    LinearRegression class after sklearn's, but calculate t-statistics
+    and p-values for model coefficients (betas).
+    Additional attributes available after .fit()
+    are `t` and `p` which are of the shape (y.shape[1], X.shape[1])
+    which is (n_features, n_coefs)
+    This class sets the intercept to 0 by default, since usually we include it
+    in X.
+    """
+
+    def __init__(self, *args, **kwargs):
+        if not "fit_intercept" in kwargs:
+            kwargs['fit_intercept'] = False
+        super(LinearRegression, self)\
+                .__init__(*args, **kwargs)
+
+    def fit(self, X, y, n_jobs=1):
+        self = super(LinearRegression, self).fit(X, y, n_jobs)
+
+        sse = np.sum((self.predict(X) - y) ** 2, axis=0) / float(X.shape[0] - X.shape[1])
+        se = np.array([
+            np.sqrt(np.diagonal(sse[i] * np.linalg.inv(np.dot(X.T, X))))
+                                                    for i in range(sse.shape[0])
+                    ])
+
+        self.t = self.coef_ / se
+        self.p = 2 * (1 - stats.t.cdf(np.abs(self.t), y.shape[0] - X.shape[1]))
+        return self
+
 
 
 def convert_to_float(data):
@@ -22,9 +57,12 @@ def convert_to_float(data):
     for i in range(data.shape[0]):
         idx = np.where(data[i,:] == 0)
         data[i,idx] = row_means[i]
+        j0 = data.shape[1]-2
+        if j0 == 0:
+            data[i,j0] = 2*data[i,j0-1] - data[i,j0-2]
         j = data.shape[1]-1
-        if data[i,j] == 0:
-            data[i,j] = 2*data[i,j-1] - data[i,j-2]
+        #if data[i,j] == 0:
+        data[i,j] = 2*data[i,j-1] - data[i,j-2]
             
     return data
 
@@ -46,7 +84,16 @@ def convert_to_float_ex(data):
     return data
 
     
+
+def regress(year_series, values):
+    year_series = year_series.reshape((len(year_series),1))
+    ridge = Ridge()
+    ridge.fit(year_series, values)
+    new_val = ridge.predict(year_series[-1]+1)
+    return new_val, ridge.coef_
+
     
+# LOAD DATA   
 file_path_ngo_budget = 'Data/NGO_DataDisbursement.csv'
 ngo_file = open(file_path_ngo_budget, 'r')
 reader = csv.DictReader(ngo_file)
@@ -72,12 +119,12 @@ for c in countries:
 
 country_data = np.array(country_data)
 country_data = country_data.astype(float)
-#print(country_data)
+print(country_data)
 #plt.matshow(country_data.T)
 #plt.colorbar()
 #plt.show()    
 country_data = convert_to_float_ex(country_data)
-#print(country_data)
+print(country_data)
 country_data = country_data.T
 plt.matshow(country_data)
 plt.colorbar()
@@ -134,9 +181,9 @@ for row in reader:
     found_countries.append(row['Country Code'])
     data_san.append(rows)   
 found_countries = set(found_countries) 
-#fail = list(set(countries) - found_countries)
-#for f in fail:
-#    print(f)
+fail = list(set(countries) - found_countries)
+for f in fail:
+    print(f)
 
 f = 'Data/water.csv'
 ff = open(f, 'r')
@@ -180,68 +227,158 @@ plt.colorbar()
 plt.show()
 #print(data)
 
-#print(countries)
+print(countries)
 
 data_pop = convert_to_float(data_pop)
-data_ch_m = convert_to_float(data_ch_m)
-data_san = convert_to_float(data_san)
-data_water = convert_to_float(data_water)
-data_poverty = convert_to_float(data_poverty)
-data_prel = convert_to_float(data_prel)
+data_ch_m_ORIG = convert_to_float(data_ch_m)
+data_san_ORIG = convert_to_float(data_san)
+data_water_ORIG = convert_to_float(data_water)
+data_poverty_ORIG = convert_to_float(data_poverty)
+data_prel_ORIG = convert_to_float(data_prel)
 #data_ch_m = np.multiply(data_ch_m, data_pop) # abs valus
 #data_san = np.multiply(data_san, data_pop) # abs valus
 #data_ch_m = data_ch_m * 0.001
 #data_san = data_san * 0.01
 
-print(data_pop[50, 1])
-
-plt.matshow(data_pop.T)
-plt.colorbar()
-plt.show()
-
-plt.matshow(data_ch_m.T)
-plt.colorbar()
-plt.show()
-
-plt.matshow(data_san.T)
-plt.colorbar()
-plt.show()
-
-plt.matshow(data_water.T)
-plt.colorbar()
-plt.show()
-
-plt.matshow(data_poverty.T)
-plt.colorbar()
-plt.show()
-
-plt.matshow(data_prel.T)
-plt.colorbar()
-plt.show()
 
 
+# plt.matshow(data_ch_m.T)
+# plt.colorbar()
+# plt.show()
+
+# plt.matshow(data_san.T)
+# plt.colorbar()
+# plt.show()
+
+# plt.matshow(data_water.T)
+# plt.colorbar()
+# plt.show()
+
+# plt.matshow(data_poverty.T)
+# plt.colorbar()
+# plt.show()
+
+# plt.matshow(data_prel.T)
+# plt.colorbar()
+# plt.show()
 
 
+data_san = data_san_ORIG
+data_water = data_water_ORIG
+data_ch_m =data_ch_m_ORIG
 
 
+# ITERATE FOR NEXT 5 YEARS
+for new_year in range(2017, 2022):
+
+    ################### REGRESSION OF FUTURE WATER; SANITARY and POPULATION ####################################
+    reg_san, coeff_san = regress(years, data_san.T)
+
+    reg_water, coeff_water = regress(years, data_water.T)
+
+    reg_pop, coeff_pop = regress(years, data_pop.T)
 
 
+    #################### LEAST SQUARE to find MORTALITY COEFFS ####################################
 
-def regress(year_series, values, degree=2):
-    
-    year_series = year_series.reshape((len(year_series),1))
-    print('year_series: ',year_series.shape)
-    print('values: ',values.shape)
-    ridge = Ridge()
-    model = make_pipeline(PolynomialFeatures(degree), ridge)
-    model.fit(year_series, values)
-    new_val = model.predict(year_series[-1]+1)
-    #plt.plot(years[-1]+1, new_val)
+    data_ch_m = np.multiply(data_ch_m/10000.0,data_pop)
+    #data_san= np.multiply(data_san/100.0,data_pop)
+    #data_water = np.multiply(data_water/100.0,data_pop)
+
+    print(country_data.shape,data_ch_m.shape,data_san.shape)
+    coeff = []
+    err = []
+    for idx,c in enumerate(country_data.T):
+        l = len(c)
+        A = np.ones(l)
+        A = np.vstack([A,c])
+        #A = np.vstack([A,data_san[idx,:]])
+        #A = np.vstack([A,data_water[idx,:]])
+        #plt.plot(range(l),data_pop[idx,:])
+        #plt.show()
+        A = A.T
+        #C,R = lstsq(A,data_ch_m[idx,:])[:2]
+        reg = LinearRegression()
+        reg.fit(A,data_ch_m[idx,:].reshape(-1,1))
+        C = reg.coef_[0]
+        p = reg.p[0]
+        e = reg.score(A,data_ch_m[idx,:])
+        err.append(e.mean())
+        #C = list(zip(C,p))
+        coeff.append(C)
+    #print(err)
+    plt.show()
+    coeff = np.array(coeff)
+    #print(coeff.shape)
+    #x_range = range(len(coeff))
+    #plt.plot(x_range,coeff[:,1])
     #plt.show()
-    return new_val, ridge.coef_
+    #print(coeff)
 
-reg_san, coeff_san = regress(years, data_san.T)
-print(coeff_san)
-reg_water, coeff_water = regress(years, data_water.T)
+
+
+
+    #################################### LINEAR PROGRAM ######################################################
+
+    beta = coeff[:,1]
+    #reg_san = np.multiply(reg_san/100.0,reg_pop)
+    #reg_water = np.multiply(reg_water/100.0,reg_pop)
+
+    #reg_san = np.multiply(reg_san,coeff[:,2])
+    #reg_water = np.multiply(reg_water,coeff[:,3])
+
+    c = coeff[:,0] #+ reg_san + reg_water
+    c = c.reshape(-1)
+    #print(c.shape)
+
+    A = np.ones(len(beta))
+    eye_m = -np.diag(beta)
+    A = np.vstack([A,eye_m])
+    #print(A)
+
+    b = np.zeros(len(beta) +1)
+    b[0] = 1e9
+    b[1:] += c
+
+    #idx = np.where(np.logical_or(b[1:] >= 0,-1*beta >= 0))
+
+
+    #beta = beta[idx]
+    #b = np.zeros(len(beta) +1)
+    #c = c[idx]
+    #b[0] = 1e9
+    #b[1:] += c
+    #A = np.ones(len(beta))
+    #eye_m = -np.diag(beta)
+    #A = np.vstack([A,eye_m])
+
+
+
+    res = linprog(beta, A_ub=A, b_ub=b)
+    X = res['x']
+    #print(res['x'],np.sum(res['x']))
+    new_mort_rate = np.multiply(X,beta) + c
+    print(np.sum(new_mort_rate))
+
+
+    #################################### UPDATE THE VALUES ####################################
+
+
+    # check if they have to be rescaled
+
+    print('data_san: ', data_san.shape)
+    print('reg_san: ', reg_san.shape)
+    data_san = np.hstack([data_san,reg_san.T])
+
+    reg_water = np.hstack((data_water,reg_water.T))
+    country_data = np.vstack((country_data, X))
     
+    new_mort_rate = new_mort_rate.reshape((len(new_mort_rate),1))
+    print('data_ch_m: ', data_ch_m.shape)
+    print('new_mort_rate: ', new_mort_rate.shape)
+    data_ch_m = np.hstack((data_ch_m, new_mort_rate))
     
+    years.append(new_year)
+    print('iter for ', new_year)
+
+print('done')
