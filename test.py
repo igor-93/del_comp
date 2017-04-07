@@ -187,7 +187,6 @@ for new_year in range(2017, 2021):
     data_ch_m_curr = data_ch_m
     data_water_curr = np.multiply(data_water/100.0,data_pop) 
 
-    print(country_data.shape,data_ch_m_curr.shape,data_san.shape)
     coeff = []
     #err = []
     for idx,c in enumerate(country_data.T):
@@ -283,4 +282,13 @@ plt.plot(np.arange(2011,2021),np.sum(country_data != 0,1)[-10:])
 plt.xlabel("Years")
 plt.ylabel("Number of Countries")
 plt.title("Number of Countries with Funds allocated")
+plt.show()
+
+plot_val = np.median(country_data[-5:],0)
+x_ticks = range(len(plot_val))
+plt.bar(x_ticks,plot_val,color='g')
+plt.xticks(x_ticks, countries, rotation='vertical')
+plt.xlabel("Countries")
+plt.ylabel("Median Money Invested")
+plt.title("Median Money Invested By Country (Predicted Data)")
 plt.show()
