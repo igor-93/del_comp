@@ -22,6 +22,9 @@ def convert_to_float(data):
     for i in range(data.shape[0]):
         idx = np.where(data[i,:] == 0)
         data[i,idx] = row_means[i]
+        j = data.shape[1]-1
+        if data[i,j] == 0:
+            data[i,j] = 2*data[i,j-1] - data[i,j-2]
             
     return data
 
@@ -69,12 +72,12 @@ for c in countries:
 
 country_data = np.array(country_data)
 country_data = country_data.astype(float)
-print(country_data)
+#print(country_data)
 #plt.matshow(country_data.T)
 #plt.colorbar()
 #plt.show()    
 country_data = convert_to_float_ex(country_data)
-print(country_data)
+#print(country_data)
 country_data = country_data.T
 plt.matshow(country_data)
 plt.colorbar()
@@ -131,9 +134,9 @@ for row in reader:
     found_countries.append(row['Country Code'])
     data_san.append(rows)   
 found_countries = set(found_countries) 
-fail = list(set(countries) - found_countries)
-for f in fail:
-    print(f)
+#fail = list(set(countries) - found_countries)
+#for f in fail:
+#    print(f)
 
 f = 'Data/water.csv'
 ff = open(f, 'r')
@@ -177,7 +180,7 @@ plt.colorbar()
 plt.show()
 #print(data)
 
-print(countries)
+#print(countries)
 
 data_pop = convert_to_float(data_pop)
 data_ch_m = convert_to_float(data_ch_m)
@@ -190,7 +193,11 @@ data_prel = convert_to_float(data_prel)
 #data_ch_m = data_ch_m * 0.001
 #data_san = data_san * 0.01
 
+print(data_pop[50, 1])
 
+plt.matshow(data_pop.T)
+plt.colorbar()
+plt.show()
 
 plt.matshow(data_ch_m.T)
 plt.colorbar()
@@ -211,12 +218,6 @@ plt.show()
 plt.matshow(data_prel.T)
 plt.colorbar()
 plt.show()
-
-
-
-
-
-
 
 
 
